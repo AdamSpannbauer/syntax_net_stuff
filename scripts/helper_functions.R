@@ -11,7 +11,7 @@ create_sent_id <- function(word_sent_id) {
   which(word_sent_id == 1) %>% 
     c((length(word_sent_id)+1)) %>% 
     diff() %>% 
-    map2(1:length(.), ~rep(.y, .x)) %>% 
+    purrr::map2(1:length(.), ~rep(.y, .x)) %>% 
     unlist()
 }
 
