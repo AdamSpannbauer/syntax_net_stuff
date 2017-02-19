@@ -1,3 +1,8 @@
+# file tasks:
+#   define various functions to be used by other scripts
+#   should prolly organize them better
+#----------------------------------------------------------------------------------------
+
 #take vector of word ids and assign sent ids, new sent id when word id resets to 1
 # example:
     # create_sent_id(c(1:3,1:4))
@@ -10,7 +15,7 @@ create_sent_id <- function(word_sent_id) {
     unlist()
 }
 
-#parse text into sentences
+#parse text into sentences/rm blank elements before returning
 parse_sentences <- function(doc) {
   sentences <- stringr::str_split(string = doc, 
                      pattern = stringr::regex("(?<!\\w\\.\\w.)(?<![A-Z][a-z]\\.)(?<=\\.|\\?)\\s")) %>% 
@@ -26,68 +31,90 @@ write_sentences <- function(sentences, file="models/syntaxnet/test_data/test_dat
   readr::write_lines(sentences_write, file)
 }
 
-#lookup a word's head word info (i.e. append )
+#lookup a word's head word info (i.e. append parent word's to child word's row)
 append_head_info <- function(conll_df){
   child_df  <- conll_df
   parent_df <- conll_df %>% 
-    select(word_id,
-           parent_token  = token,
-           parent_deprel = deprel)
+    dplyr::select(word_id,
+                  parent_token  = token,
+                  parent_deprel = deprel)
   
-  left_join(child_df, parent_df, by=c("head"="word_id")) %>% 
-    mutate(deps = paste0(word_id, ":", deprel, "|", head, ":", parent_deprel)) %>% 
-    select(word_id, token, cpostag, postag, head, 
-           deprel, deps, parent_token, parent_deprel)
+  dplyr::left_join(child_df, parent_df, by=c("head"="word_id")) %>% 
+    dplyr::mutate(deps = paste0(word_id, ":", deprel, "|", head, ":", parent_deprel)) %>% 
+    dplyr::select(word_id, token, cpostag, postag, head, 
+                  deprel, deps, parent_token, parent_deprel)
 }
 
-# use igraph to plot sentence structure
+# function to plot sentence structure with igraph
 # ... passed to plot.igraph
-plot_sentence <- function(sentence_conll_tbl, ...) {
-  edges_df <- tibble(source=sentence_conll_tbl$word_id, target=sentence_conll_tbl$head) %>% 
-    filter(target != 0)
-  nodes_df <- tibble(id=sentence_conll_tbl$word_id, name=sentence_conll_tbl$token)
-  
-  ig <- graph.data.frame(edges_df, directed=FALSE, nodes_df)
-  plot(ig, ...)
-}
-
-#bad
-# parseface <- function(sentences, syntaxnet_path = "models/syntaxnet", verbose = FALSE) {
-#   og_wd <- setwd(syntaxnet_path)
-#   on.exit(setwd(og_wd))
+# plot_sentence_ig <- function(sentence_conll_tbl, ...) {
+#   edges_df <- tibble(source=sentence_conll_tbl$word_id, target=sentence_conll_tbl$head) %>% 
+#     filter(target != 0)
+#   nodes_df <- tibble(id=sentence_conll_tbl$word_id, name=sentence_conll_tbl$token)
 #   
-#   sentences_write <- paste0(sentences, "\n")
-#   
-#   readr::write_lines(sentences_write, "test_data/test_data.txt")
-#   
-#   system("syntaxnet/demo.sh", ignore.stdout = !verbose, wait = TRUE)
-#   system("syntaxnet/demo.sh", ignore.stdout = !verbose, wait = TRUE)
-# 
-#   parse_df <- read_delim("test_data/test_data_parsed.txt", delim = "\t", 
-#                          col_names = FALSE,
-#                          col_types = cols(
-#                            X1 = col_integer(),
-#                            X2 = col_character(),
-#                            X3 = col_character(),
-#                            X4 = col_character(),
-#                            X5 = col_character(),
-#                            X6 = col_character(),
-#                            X7 = col_integer(),
-#                            X8 = col_character(),
-#                            X9 = col_character(),
-#                            X10 = col_character()
-#                          )) %>%
-#     rename(word_id  = X1,
-#            token    = X2,
-#            lemma    = X3,
-#            cpostag  = X4,
-#            postag   = X5,
-#            feats    = X6,
-#            head     = X7,
-#            deprel   = X8,
-#            phead    = X9) %>% 
-#     mutate(sent_id = create_sent_id(word_id))
-#   
-#   return(parse_df)
+#   ig <- igraph::graph.data.frame(edges_df, directed=FALSE, nodes_df)
+#   plot(ig, ...)
 # }
 
+#function to plot sentence structure with visnetwork
+plot_sentence_vis_net <- function(sentence_conll_tbl) {
+  tbl <- sentence_conll_tbl %>% 
+    dplyr::filter(cpostag != ".")
+  edges_df <- dplyr::tibble(from = tbl$word_id, 
+                            to   = tbl$head) %>% 
+    filter(to != 0)
+  nodes_df <- dplyr::tibble(id=tbl$word_id, 
+                            label=tbl$token)
+  
+  visNetwork::visNetwork(nodes_df, edges_df) %>% 
+    visNetwork::visHierarchicalLayout()
+}
+
+#hunspell stemming function
+my_hunspell_stem <- function(token) {
+  stem_token <- hunspell::hunspell_stem(token)[[1]]
+  if (length(stem_token) == 0) return(token) else return(stem_token[1])
+}
+#vectorized hunspell stemmer
+hunspell_stemmer <- Vectorize(my_hunspell_stem, "token", USE.NAMES = FALSE)
+
+#function to convert tokens to stems
+#can return stems or recompleted stems
+#shortest token returned as recompleted stem if return_stem=FALSE
+stem_complete <- function(tokens, return_stem=FALSE) {
+  if (return_stem) {
+    return_col <- "stem"
+  } else {
+    return_col <- "restem"
+  }
+  
+  og_tokens       <- tokens
+  hunspell_tokens <- hunspell_stemmer(tokens)
+  snow_hun_tokens <- SnowballC::wordStem(hunspell_tokens)
+  #stem off ers from end of words
+  mega_stem_tokens <- stringr::str_replace_all(snow_hun_tokens, stringr::regex("er$"), "") %>% 
+    stringr::str_replace_all(stringr::regex("ed$"), "e")
+  
+  dplyr::tibble(og=og_tokens, stem=mega_stem_tokens) %>% 
+    dplyr::mutate(n_char = nchar(og)) %>% 
+    dplyr::mutate(n_char = ifelse(is.na(n_char), 99, n_char)) %>% 
+    dplyr::mutate(stem = tolower(stem)) %>% 
+    dplyr::mutate(stem = ifelse(stem=="na", NA_character_, stem)) %>% 
+    dplyr::group_by(stem) %>% 
+    dplyr::mutate(restem = og[which.min(n_char)]) %>% 
+    dplyr::ungroup() %>% 
+    .[[return_col]]
+}
+
+#rneo4j build graph with periodic commit
+#query must reference tbl vars prefixed with 'row.'
+build_graph <- function(tbl, graph, query, neo_import_dir="~/Documents/Neo4j/default.graphdb/import") {
+  tmp_csv <- paste0(neo_import_dir, "/tmp.csv")
+  readr::write_csv(tbl, tmp_csv)
+  
+  query_start <- paste0('USING PERIODIC COMMIT\nLOAD CSV WITH HEADERS FROM "file:///tmp.csv" AS row')
+  query_full  <- paste0(query_start,"\n",query)
+  
+  RNeo4j::cypher(graph, query_full)
+  summary(graph)
+}
