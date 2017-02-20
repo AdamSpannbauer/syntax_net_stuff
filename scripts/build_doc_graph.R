@@ -16,7 +16,8 @@ source("scripts/helper_functions.R")
 #######################
 graph <- startGraph("http://localhost:7474/db/data")
 clear(graph, FALSE)
-try(addConstraint(graph, "word", "alias"), silent = T)
+try(addConstraint(graph, "word", "name"), silent = T)
+try(addIndex(graph, "word", "name"),      silent = T)
 
 #######################
 # prep data for graoh #
@@ -44,12 +45,12 @@ edges_df <- doc_df %>%
 #######################
 # write data to graoh #
 #######################
-query_nodes <- 'MERGE (w:word {alias: row.stem, sent_word_ids: row.sent_word_ids, 
+query_nodes <- 'MERGE (w:word {name: row.stem, sent_word_ids: row.sent_word_ids, 
                cpostags: row.cpostags, postags: row.postags, deprels: row.deprels })'
 build_graph(nodes_df, graph, query_nodes)
 
-query_edges <- 'MATCH (a:word {alias: row.stem})
-                MATCH (b:word {alias: row.parent_stem})
+query_edges <- 'MATCH (a:word {name: row.stem})
+                MATCH (b:word {name: row.parent_stem})
                 MERGE (a)-[r:rel {child_deprel: row.deprel, parent_deprel: row.parent_deprel,
                                   sent_ids: row.sent_ids, weight: row.weight}]->(b)'
 build_graph(edges_df, graph, query_edges)

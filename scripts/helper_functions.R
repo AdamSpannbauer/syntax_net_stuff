@@ -127,8 +127,18 @@ stem_complete <- function(tokens, return_stem=FALSE) {
 
 #rneo4j build graph with periodic commit
 #query must reference tbl vars prefixed with 'row.'
-build_graph <- function(tbl, graph, query, neo_import_dir="~/Documents/Neo4j/default.graphdb/import") {
-  tmp_csv <- paste0(neo_import_dir, "/tmp.csv")
+build_graph <- function(tbl, graph, query, neo_import_dir=NULL) {
+  if(is.null(neo_import_dir)) {
+    if (Sys.info()[["sysname"]] == "Windows") {
+      import_dir <- "~/Neo4j/default.graphdb/import"
+    } else {
+      import_dir <- "~/Documents/Neo4j/default.graphdb/import"
+    }
+  } else {
+    import_dir <- neo_import_dir
+  }
+  
+  tmp_csv <- paste0(import_dir, "/tmp.csv")
   readr::write_csv(tbl, tmp_csv)
   
   query_start <- paste0('USING PERIODIC COMMIT\nLOAD CSV WITH HEADERS FROM "file:///tmp.csv" AS row')
