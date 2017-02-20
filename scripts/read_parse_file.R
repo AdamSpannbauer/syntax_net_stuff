@@ -6,13 +6,15 @@
 
 library(tidyverse)
 library(magrittr)
+library(stringr)
 source("scripts/helper_functions.R")
 
 ############################
 # define needed file paths #
 ############################
-doc_path            <- "data/little_red_riding_hood.txt"
-# doc_path            <- "data/goldilocks.txt"
+doc_path <- "data/little_red_riding_hood.txt"
+# doc_path <- "data/goldilocks.txt"
+doc_path <- list.files("ignore_dir", full.names = TRUE)[2]
 
 #data paths require modifying syntaxnet context file
 syntaxnet_path      <- "models/syntaxnet"
@@ -24,7 +26,10 @@ data_out_file       <- paste0(syntaxnet_data_path,"/test_data_parsed.txt")
 # prep doc for syntaxnet #
 ##########################
 read_lines(doc_path) %>% 
-  parse_sentences() %>% 
+  paste(collapse=" ") %>% 
+  str_replace_all(regex("\\s+"), " ") %>% 
+  fix_line_split_words() %>% 
+  parse_sentences() %>%
   write_sentences(data_in_file) #write sentences to file 1 sent per line
 
 ########################## BROKEN # BROKEN # BROKEN #
@@ -90,5 +95,14 @@ write_csv(doc_tag_df, "data/tagged_doc_df.csv")
 ##########################
 # viz sentence hieracrhy #
 ##########################
-tbl_ind <- 5
-plot_sentence_vis_net(sent_nested_df$data[[tbl_ind]])
+tbl_ind  <- 33
+(sent_tbl <- sent_nested_df$data[[tbl_ind]])
+plot_sentence_vis_net(sent_tbl)
+
+
+quant_sent_df <- sent_nested_df %>% 
+  filter(map_lgl(data, ~"NUM" %in% .x$cpostag))
+
+q_tbl_ind  <- 10
+(q_sent_tbl <- quant_sent_df$data[[q_tbl_ind]])
+plot_sentence_vis_net(q_sent_tbl)

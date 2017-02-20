@@ -25,6 +25,25 @@ parse_sentences <- function(doc) {
   sentences[which(sentences != "")]
 }
 
+#function to fix words split by line returns in doc read
+fix_line_split_words <- function(doc) {
+  df <- tibble(doc) %>% 
+    tidytext::unnest_tokens(bigram, 
+                            doc, 
+                            to_lower = T,
+                            token = "ngrams",
+                            n=2) %>% 
+    mutate(toke_gram  = stringr::str_replace_all(bigram, " ", "")) %>% 
+    mutate(spell_flag = hunspell::hunspell_check(toke_gram)) %>% 
+    filter(spell_flag)
+  
+  qdap::mgsub(doc, 
+              pattern       = paste0("\\b", df$bigram, "\\b"),
+              replacement   = df$toke_gram,
+              fixed         = FALSE, 
+              order.pattern = TRUE)
+}
+
 #write sentences to file for parseface
 write_sentences <- function(sentences, file="models/syntaxnet/test_data/test_data.txt") {
   sentences_write <- paste0(sentences, "\n")
@@ -60,14 +79,14 @@ append_head_info <- function(conll_df){
 plot_sentence_vis_net <- function(sentence_conll_tbl) {
   tbl <- sentence_conll_tbl %>% 
     dplyr::filter(cpostag != ".")
-  edges_df <- dplyr::tibble(from = tbl$word_id, 
-                            to   = tbl$head) %>% 
-    filter(to != 0)
+  edges_df <- dplyr::tibble(to     = tbl$word_id, 
+                            from   = tbl$head) %>% 
+    filter(from != 0)
   nodes_df <- dplyr::tibble(id=tbl$word_id, 
                             label=tbl$token)
   
   visNetwork::visNetwork(nodes_df, edges_df) %>% 
-    visNetwork::visHierarchicalLayout()
+    visNetwork::visHierarchicalLayout(sortMethod="directed")
 }
 
 #hunspell stemming function

@@ -26,16 +26,16 @@ doc_df <- read_csv("data/tagged_doc_df.csv")
 nodes_df <- doc_df %>% 
   mutate(sent_word_id = paste(sent_id, "_", word_id)) %>% 
   group_by(stem) %>% 
-  summarise(sent_word_ids = paste(sent_word_id, collapse=", "),
-            cpostags      = paste(cpostag, collapse=", "),
-            postags       = paste(postag, collapse=", "),
-            deprels       = paste(deprel, collapse=", ")) %>% 
+  summarise(sent_word_ids = paste(unique(sent_word_id), collapse=", "),
+            cpostags      = paste(unique(cpostag), collapse=", "),
+            postags       = paste(unique(postag), collapse=", "),
+            deprels       = paste(unique(deprel), collapse=", ")) %>% 
   ungroup()
 
 edges_df <- doc_df %>% 
   select(stem, parent_stem, deprel, parent_deprel, sent_id) %>% 
   group_by(stem, parent_stem, deprel, parent_deprel) %>% 
-  summarise(sent_ids = paste(sent_id, collapse=", "),
+  summarise(sent_ids = paste(unique(sent_id), collapse=", "),
             weight   = n()) %>% 
   ungroup() %>% 
   arrange(desc(weight)) %>% 
