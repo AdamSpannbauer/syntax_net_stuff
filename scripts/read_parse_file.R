@@ -14,7 +14,7 @@ source("scripts/helper_functions.R")
 ############################
 doc_path <- "data/little_red_riding_hood.txt"
 # doc_path <- "data/goldilocks.txt"
-doc_path <- list.files("ignore_dir", full.names = TRUE)[2]
+# doc_path <- list.files("ignore_dir", full.names = TRUE)[2]
 
 #data paths require modifying syntaxnet context file
 syntaxnet_path      <- "models/syntaxnet"
@@ -26,9 +26,9 @@ data_out_file       <- paste0(syntaxnet_data_path,"/test_data_parsed.txt")
 # prep doc for syntaxnet #
 ##########################
 read_lines(doc_path) %>% 
-  paste(collapse=" ") %>% 
-  str_replace_all(regex("\\s+"), " ") %>% 
-  fix_line_split_words() %>% 
+  # paste(collapse=" ") %>%
+  # str_replace_all(regex("\\s+"), " ") %>%
+  # fix_line_split_words() %>%
   parse_sentences() %>%
   write_sentences(data_in_file) #write sentences to file 1 sent per line
 
@@ -95,14 +95,22 @@ write_csv(doc_tag_df, "data/tagged_doc_df.csv")
 ##########################
 # viz sentence hieracrhy #
 ##########################
-tbl_ind  <- 44
-(sent_tbl <- sent_nested_df$data[[tbl_ind]])
+#simple sentence (using red riding hood)
+tbl_ind  <- 45
+sent_tbl <- sent_nested_df$data[[tbl_ind]]
+sent_tbl$token %>% 
+  paste(collapse=" ") %>% 
+  cat("\n")
 plot_sentence_vis_net(sent_tbl)
 
-
+#filter to only keep sentences containing number tokens
 quant_sent_df <- sent_nested_df %>% 
   filter(map_lgl(data, ~"NUM" %in% .x$cpostag))
 
-q_tbl_ind  <- 10
-(q_sent_tbl <- quant_sent_df$data[[q_tbl_ind]])
+#comlex sentence (using red riding hood)
+q_tbl_ind  <- 1
+q_sent_tbl <- quant_sent_df$data[[q_tbl_ind]]
+q_sent_tbl$token %>% 
+  paste(collapse=" ") %>% 
+  cat("\n")
 plot_sentence_vis_net(q_sent_tbl)
