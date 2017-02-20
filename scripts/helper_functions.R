@@ -83,7 +83,7 @@ plot_sentence_vis_net <- function(sentence_conll_tbl) {
                             from   = tbl$head) %>% 
     filter(from != 0)
   nodes_df <- dplyr::tibble(id=tbl$word_id, 
-                            label=tbl$token)
+                            label=paste0(tbl$word_id,": " ,tbl$token))
   
   visNetwork::visNetwork(nodes_df, edges_df) %>% 
     visNetwork::visHierarchicalLayout(sortMethod="directed")

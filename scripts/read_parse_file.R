@@ -95,7 +95,7 @@ write_csv(doc_tag_df, "data/tagged_doc_df.csv")
 ##########################
 # viz sentence hieracrhy #
 ##########################
-tbl_ind  <- 33
+tbl_ind  <- 44
 (sent_tbl <- sent_nested_df$data[[tbl_ind]])
 plot_sentence_vis_net(sent_tbl)
 
