@@ -13,6 +13,7 @@ source("scripts/helper_functions.R")
 # define needed file paths #
 ############################
 doc_path <- "data/little_red_riding_hood.txt"
+# doc_path <- "data/random_number_sentences.txt"
 # doc_path <- "data/goldilocks.txt"
 # doc_path <- list.files("ignore_dir", full.names = TRUE)[2]
 
@@ -72,8 +73,10 @@ parse_df <- read_delim(data_out_file,
          phead    = X9) %>% 
   mutate(sent_id = create_sent_id(word_id)) %>% 
   select(sent_id, word_id, token,
-         cpostag, postag, head, deprel)
-
+         cpostag, postag, head, deprel) %>% 
+  #change percents to NOUN_PERC cpostag
+  mutate(cpostag = ifelse(token=="%", "NOUN_PERC", cpostag))
+  
 #append parent word info to each child row
 sent_nested_df <- parse_df %>% 
   nest(-sent_id) %>% 
@@ -84,10 +87,12 @@ doc_tag_df <- sent_nested_df %>%
   unnest() %>% 
   filter(cpostag != ".") %>% 
   mutate(token    = tolower(token)) %>% 
-  mutate(stem     = stem_complete(token)) %>% 
+  # mutate(stem     = stem_complete(token)) %>% 
   mutate(stem_pos = paste0(token, "_", deprel)) %>% 
   mutate(parent_stem = stem_complete(parent_token)) %>% 
-  mutate(parent_stem_pos = paste0(parent_token, "_", parent_deprel))
+  mutate(parent_stem_pos = paste0(parent_token, "_", parent_deprel)) %>% 
+  #collapse percents onto children
+  mutate(token   = ifelse(parent_token=="%", paste0(token, parent_token), token))
 
 #save output
 write_csv(doc_tag_df, "data/tagged_doc_df.csv")
@@ -108,7 +113,7 @@ quant_sent_df <- sent_nested_df %>%
   filter(map_lgl(data, ~"NUM" %in% .x$cpostag))
 
 #comlex sentence (using red riding hood)
-q_tbl_ind  <- 1
+q_tbl_ind  <- 2
 q_sent_tbl <- quant_sent_df$data[[q_tbl_ind]]
 q_sent_tbl$token %>% 
   paste(collapse=" ") %>% 

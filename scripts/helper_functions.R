@@ -109,7 +109,8 @@ stem_complete <- function(tokens, return_stem=FALSE) {
   
   og_tokens       <- tokens
   hunspell_tokens <- hunspell_stemmer(tokens)
-  snow_hun_tokens <- SnowballC::wordStem(hunspell_tokens)
+  snow_hun_tokens <- hunspell_tokens
+  # snow_hun_tokens <- SnowballC::wordStem(hunspell_tokens)
   #stem off ers from end of words
   mega_stem_tokens <- stringr::str_replace_all(snow_hun_tokens, stringr::regex("er$"), "") %>% 
     stringr::str_replace_all(stringr::regex("ed$"), "e")
